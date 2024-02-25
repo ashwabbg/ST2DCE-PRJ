@@ -19,7 +19,7 @@ func main() {
 
 func whoAmI(response http.ResponseWriter, r *http.Request) {
 	who := []whoami{
-		whoami{Name: "MonkyTeam",
+		whoami{Name: "Efrei Paris",
 			Title: "DevOps and Continous Deployment",
 			State: "FR",
 		},

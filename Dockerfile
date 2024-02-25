@@ -2,13 +2,13 @@
 FROM golang:alpine
 
 # Set the working directory inside the container
-WORKDIR /webapi
+WORKDIR /app
 
-# Copy the Go application binary into the container
-COPY main .
+# Copy the entire Go application directory into the container
+COPY webapi /app
 
 # Expose the port the application listens on
 EXPOSE 8080
 
 # Command to run the application
-CMD ["./myapp"]
+CMD ["go", "run", "main.go"]

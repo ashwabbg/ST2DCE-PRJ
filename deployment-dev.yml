@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: webapi-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: webapi-dev
+  template:
+    metadata:
+      labels:
+        app: webapi-dev
+    spec:
+      containers:
+      - name: webapi
+        image: myapp:latest
+        ports:
+        - containerPort: 8081  # Use a different internal port for development
+        imagePullPolicy: Never
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: webapi-dev
+spec:
+  selector:
+    app: webapi-dev
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8081  # Map external port 80 to the internal port 8081
+  type: NodePort
+
