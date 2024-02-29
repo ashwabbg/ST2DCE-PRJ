@@ -15,12 +15,10 @@ http://host.docker.internal:9090
         <li><a href="#installation">Installation</a></li>
       </ul>
     </li>
-    <li><a href="#usage">Usage</a></li>
-    <li><a href="#roadmap">Roadmap</a></li>
-    <li><a href="#contributing">Contributing</a></li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-    <li><a href="#acknowledgments">Acknowledgments</a></li>
+    <li><a href="#jenkins">Jenkins</a></li>
+    <li><a href="#prometheus">Prometheus</a></li>
+    <li><a href="#grafana">Grafana</a></li>
+    <li><a href="#alert">Alert</a></li>
   </ol>
 </details>
 
@@ -46,112 +44,139 @@ http://host.docker.internal:9090
 3. open docker desktop
 4. launch the pipeline & profit !
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-## Usage
-
-Use this space to show useful examples of how a project can be used. Additional screenshots, code examples and demos work well in this space. You may also link to more resources.
-
-_For more examples, please refer to the [Documentation](https://example.com)_
+<div align="center">
+<img src="screenshot/jenkins/pipeline.png">
+</div>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
+## Jenkins
+1. Once the pipeline is launched, we need to clone the repository to get all the file needed
 
-<!-- ROADMAP -->
-## Roadmap
-
-- [ ] Feature 1
-- [ ] Feature 2
-- [ ] Feature 3
-    - [ ] Nested Feature
-
-See the [open issues](https://github.com/github_username/repo_name/issues) for a full list of proposed features (and known issues).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<div align="center">
+<img src="screenshot/jenkins/git_clone.png">
+</div>
 
 
+2. Minikube is then started
 
-<!-- CONTRIBUTING -->
-## Contributing
+<div align="center">
+<img src="screenshot/jenkins/minikube_start.png">
+</div>
 
-Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
+3. We deploy the webapp image to docker thank to the DockerFile and import it to minikube
 
-If you have a suggestion that would make this better, please fork the repo and create a pull request. You can also simply open an issue with the tag "enhancement".
-Don't forget to give the project a star! Thanks again!
-
-1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<div align="center">
+<img src="screenshot/jenkins/deploy_image.png">
+</div>
 
 
+4. Then the developpement pod is launched
 
-<!-- LICENSE -->
-## License
-
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+<div align="center">
+<img src="screenshot/jenkins/deploy_dev.png">
+</div>
 
 
+5. We will need the pod name to forward it to test it so we recover it
 
-<!-- CONTACT -->
-## Contact
+<div align="center">
+<img src="screenshot/jenkins/get_pod_dev.png">
+</div>
 
-Your Name - [@twitter_handle](https://twitter.com/twitter_handle) - email@email_client.com
+6. The developpement pod is exposed to 8080:8080 and tested
 
-Project Link: [https://github.com/github_username/repo_name](https://github.com/github_username/repo_name)
+<div align="center">
+<img src="screenshot/jenkins/expose_dev.png">
+<img src="screenshot/jenkins/test_dev.png">
+</div>
+
+7. As the test on the developpement pod returned successfull, we can deploy and expose the production pod the same way we did previously
+
+<div align="center">
+<img src="screenshot/jenkins/deploy_prod.png">
+<img src="screenshot/jenkins/get_pod_prod.png">
+<img src="screenshot/jenkins/expose_prod.png">
+</div>
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
-<!-- ACKNOWLEDGMENTS -->
-## Acknowledgments
+## Prometheus
 
-* []()
-* []()
-* []()
+To get prometheus easily on our pipeline, we use a helm chart, slightly modified to represent our need.
+
+
+1. The pipeline will launch prometheus via the helm chart 
+
+<div align="center">
+<img src="screenshot/prometheus/prometheus_launch.png">
+</div>
+
+
+2. We then retrieve the pod name and expose it to 9090:9090
+
+<div align="center">
+<img src="screenshot/prometheus/get_pod_prometheus.png">
+<img src="screenshot/prometheus/expose_prometheus.png">
+</div>
+
+
+3. We can now access the prometheus UI and see that our webapp is not linked as it does not possed a ```/metrics``` endpoint
+
+<div align="center">
+<img src="screenshot/prometheus/prometheus_webapp.png">
+</div>
+
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+## Grafana
+
+1. The pipeline will launch grafana via the helm chart 
+
+<div align="center">
+<img src="screenshot/grafana/grafana_launch.png">
+</div>
+
+
+2. We retrieve the password and decode to access the UI later
+
+<div align="center">
+<img src="screenshot/grafana/get_password_admin.png">
+</div>
+
+
+3. We then retrieve the pod name and expose it to 3000:3000
+
+<div align="center">
+<img src="screenshot/grafana/expose_grafana.png">
+</div>
+
+
+4. We can now access the grafana UI and add our prometheus URL as a data source
+
+<div align="center">
+<img src="screenshot/grafana/grafana_ui.png">
+<img src="screenshot/grafana/grafana_prometheus.png">
+</div>
+
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/github_username/repo_name.svg?style=for-the-badge
-[contributors-url]: https://github.com/github_username/repo_name/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/github_username/repo_name.svg?style=for-the-badge
-[forks-url]: https://github.com/github_username/repo_name/network/members
-[stars-shield]: https://img.shields.io/github/stars/github_username/repo_name.svg?style=for-the-badge
-[stars-url]: https://github.com/github_username/repo_name/stargazers
-[issues-shield]: https://img.shields.io/github/issues/github_username/repo_name.svg?style=for-the-badge
-[issues-url]: https://github.com/github_username/repo_name/issues
-[license-shield]: https://img.shields.io/github/license/github_username/repo_name.svg?style=for-the-badge
-[license-url]: https://github.com/github_username/repo_name/blob/master/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://linkedin.com/in/linkedin_username
-[product-screenshot]: images/screenshot.png
-[Next.js]: https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white
-[Next-url]: https://nextjs.org/
-[React.js]: https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB
-[React-url]: https://reactjs.org/
-[Vue.js]: https://img.shields.io/badge/Vue.js-35495E?style=for-the-badge&logo=vuedotjs&logoColor=4FC08D
-[Vue-url]: https://vuejs.org/
-[Angular.io]: https://img.shields.io/badge/Angular-DD0031?style=for-the-badge&logo=angular&logoColor=white
-[Angular-url]: https://angular.io/
-[Svelte.dev]: https://img.shields.io/badge/Svelte-4A4A55?style=for-the-badge&logo=svelte&logoColor=FF3E00
-[Svelte-url]: https://svelte.dev/
-[Laravel.com]: https://img.shields.io/badge/Laravel-FF2D20?style=for-the-badge&logo=laravel&logoColor=white
-[Laravel-url]: https://laravel.com
-[Bootstrap.com]: https://img.shields.io/badge/Bootstrap-563D7C?style=for-the-badge&logo=bootstrap&logoColor=white
-[Bootstrap-url]: https://getbootstrap.com
-[JQuery.com]: https://img.shields.io/badge/jQuery-0769AD?style=for-the-badge&logo=jquery&logoColor=white
-[JQuery-url]: https://jquery.com 
+## Alert
+
+Our alert node is directly implemented through the custom prometheus file used 
+
+<div align="center">
+<img src="screenshot/prometheus/alert_node.png">
+<img src="screenshot/prometheus/prometheus_alert.png">
+</div>
+
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
