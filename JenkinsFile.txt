@@ -1,0 +1,215 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Cloning Git') {
+            steps {
+                // Clone the Git repository
+                git branch: 'main', credentialsId: 'githubcred', url: 'https://github.com/efrei2023/ST2DCE-PRJ.git'
+            }
+        }
+        stage('Build and Run with Docker') {
+             steps {
+                // Build the Go application inside the Docker container
+                bat 'docker build -t myapp:latest .'
+                bat 'docker run -d -p 8080:8080 myapp:latest'
+            }
+        }
+        stage('Deploy Minikube') {
+            steps {
+                bat 'minikube delete && minikube start'
+                bat 'kubectl config use-context minikube'
+                bat 'docker image save -o image.tar myapp:latest'
+                bat 'minikube image load image.tar'
+            }
+        }
+        stage('Deploy Dev Environment') {
+            steps {
+                bat 'minikube image list'
+                bat 'kubectl apply -f deployment-dev.yml'
+            }
+        }
+        stage('Get Pod Name') {
+            steps {
+                script {
+                    // Capture the command output using a temporary file
+                    def output = bat(script: 'kubectl get pods -l app=webapi-dev -o jsonpath="{.items[0].metadata.name}" > temp_pod_name.txt', returnStatus: true)
+                    
+                    // Check if the command was successful (exit code 0)
+                    if (output == 0) {
+                        // Read the content of the temporary file
+                        def podName = readFile('temp_pod_name.txt').trim()
+                        echo "The full name of the pod is: ${podName}"
+
+                        // Set the podName as an environment variable for later use
+                        env.POD_NAME = podName
+                    } else {
+                        error "Failed to get pod name"
+                    }
+                }
+            }
+        }
+
+        stage('Run Port Forward & test') {
+            parallel {
+                stage('Run Port Forward') {
+                    steps {
+                        script {
+                            // Retrieve the podName from the environment variable
+                            def podName = env.POD_NAME
+                            
+                            echo "The full name of the pod is: ${podName}"
+        
+                            // Run kubectl port-forward in the background using powershell
+                            powershell """
+                                Start-Process -FilePath "kubectl" -ArgumentList "port-forward", "$podName", "8800:8080" -NoNewWindow
+                            """
+                            
+                        }
+                    }
+                }
+                stage('Test Development Environment') {
+                    steps {
+                        // Perform a curl on the development endpoint
+                        script {
+                            sleep 90
+                            
+                            def curlOutput = bat(script: 'curl -s http://127.0.0.1:8800/whoami', returnStdout: true).trim()
+                
+                            echo "Curl Output: ${curlOutput}"
+                
+                            if (curlOutput.contains('Efrei Paris')) {
+                                echo 'Development environment test passed. Proceeding to production deployment.'
+                            
+                                powershell """ 
+                                    Stop-Process -Name "kubectl" -Force
+                                """
+                            } else {
+                                error 'Development environment test failed. Aborting production deployment.'
+                                
+                                powershell """ 
+                                    Stop-Process -Name "kubectl" -Force
+                                """
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        stage('Deploy Prod Environment') {
+            steps {
+                bat 'kubectl apply -f deployment-prod.yml'
+                
+            }
+        }
+        stage('Get Prod Pod Name') {
+            steps {
+                script {
+                    // Capture the command output using a temporary file
+                    def output = bat(script: 'kubectl get pods -l app=webapi-prod -o jsonpath="{.items[0].metadata.name}" > temp_pod_name.txt', returnStatus: true)
+                    
+                    // Check if the command was successful (exit code 0)
+                    if (output == 0) {
+                        // Read the content of the temporary file
+                        def podName = readFile('temp_pod_name.txt').trim()
+                        echo "The full name of the pod is: ${podName}"
+
+                        // Set the podName as an environment variable for later use
+                        env.PROD_POD_NAME = podName
+                    } else {
+                        error "Failed to get pod name"
+                    }
+                }
+            }
+        }
+
+        stage('Run Prod Port Forward & test') {
+            parallel {
+                stage('Run Prod Port Forward') {
+                    steps {
+                        script {
+                            // Retrieve the podName from the environment variable
+                            def podName = env.PROD_POD_NAME
+                            
+                            echo "The full name of the pod is: ${podName}"
+        
+                            // Run kubectl port-forward in the background using powershell
+                            powershell """
+                                Start-Process -FilePath "kubectl" -ArgumentList "port-forward", "$podName", "8801:8080" -NoNewWindow
+                            """
+                            
+                        }
+                    }
+                }
+                stage('Install Prometheus') {
+                    steps {
+                        script {
+                            // Install Prometheus using Helm
+                            bat 'helm repo add prometheus-community https://prometheus-community.github.io/helm-charts'
+                            bat 'helm repo update'
+                            bat 'helm upgrade -i -f prometheus.yml prometheus prometheus-community/prometheus'
+                            bat 'helm repo update'
+                            
+                            // Get the pod name
+                            def output = bat(script:'kubectl get pods --namespace default -l "app.kubernetes.io/name=prometheus,app.kubernetes.io/instance=prometheus" -o jsonpath="{.items[0].metadata.name}"> temp_pod_name.txt', returnStatus: true)
+                            if (output == 0) {
+                                // Read the content of the temporary file
+                                def podName = readFile('temp_pod_name.txt').trim()
+                                echo "The full name of the pod is: ${podName}"
+                            
+                                sleep 90
+            
+                                powershell """
+                                    Start-Process -FilePath "kubectl" -ArgumentList "port-forward", "$podName", "9090:9090" -NoNewWindow
+                                """
+                            } else {
+                                error "Failed to get pod name"
+                            }
+                            
+                        }
+                    }  
+                }
+                stage('Install Grafana'){
+                    steps {
+                        script {
+                            sleep 100
+                            // Install Grafana using Helm
+                            bat 'helm repo add grafana https://grafana.github.io/helm-charts'
+                            bat 'helm repo update'
+                            bat 'helm upgrade -i grafana grafana/grafana'
+                            bat 'helm repo update'
+                        
+                            // Get the password
+                            def password = bat(script:'kubectl get secret --namespace default grafana -o jsonpath="{.data.admin-password}"> temp_paswword.txt', returnStatus: true)
+                            if (password == 0){
+                                bat('certutil -decode temp_paswword.txt data.txt')
+                                def passwordDecode = readFile('data.txt').trim()
+                                echo "Password : ${passwordDecode}"
+                            }else{
+                                echo "failed password"
+                            }
+                            
+                            
+                            // Get the pod name
+                            def output = bat(script:'kubectl get pods --namespace default -l "app.kubernetes.io/name=grafana,app.kubernetes.io/instance=grafana" -o jsonpath="{.items[0].metadata.name}"> temp_pod_name.txt', returnStatus: true)
+                            if (output == 0) {
+                                // Read the content of the temporary file
+                                def podName = readFile('temp_pod_name.txt').trim()
+                                echo "The full name of the pod is: ${podName}"
+                            
+                                sleep 60
+            
+                                powershell """
+                                    Start-Process -FilePath "kubectl" -ArgumentList "port-forward", "$podName", "3000:3000" -NoNewWindow
+                                """
+                            } else {
+                                error "Failed to get pod name"
+                            }
+                            sleep 300
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
