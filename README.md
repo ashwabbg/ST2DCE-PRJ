@@ -138,7 +138,7 @@ To get prometheus easily on our pipeline, we use a helm chart, slightly modified
 1. The pipeline will launch grafana via the helm chart 
 
 <div align="center">
-<img src="screenshot/grafana/grafana_launch.png">
+<img src="screenshot/grafana/launch_grafana.png">
 </div>
 
 
