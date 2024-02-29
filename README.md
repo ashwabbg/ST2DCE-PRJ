@@ -1,5 +1,4 @@
 # ST2DCE-PRJ-2324S9-SE1
-http://host.docker.internal:9090
 
 <!-- Improved compatibility of back to top link: See: https://github.com/othneildrew/Best-README-Template/pull/73 -->
 <a name="readme-top"></a>
@@ -157,7 +156,7 @@ To get prometheus easily on our pipeline, we use a helm chart, slightly modified
 </div>
 
 
-4. We can now access the grafana UI and add our prometheus URL as a data source
+4. We can now access the grafana UI and add our prometheus URL (http://host.docker.internal:9090) as a data source
 
 <div align="center">
 <img src="screenshot/grafana/grafana_ui.png">
